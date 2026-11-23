@@ -344,6 +344,38 @@ test("装備はすべて付与上限 +1 を持つ", function()
 	end
 end)
 
+-- 構文チェック ---------------------------------------------------------------
+-- src 以下の全 .luau ファイルをコンパイルして、構文エラーがないか確かめる（ERROR_LOG #1）
+-- リポジトリのルートから `lune run tests/run` で実行する前提
+
+local fs = require("@lune/fs")
+local luau = require("@lune/luau")
+
+local function collectLuauFiles(dir: string, out: { string })
+	for _, name in fs.readDir(dir) do
+		local path = dir .. "/" .. name
+		if fs.isDir(path) then
+			collectLuauFiles(path, out)
+		elseif string.sub(name, -5) == ".luau" then
+			table.insert(out, path)
+		end
+	end
+end
+
+local sourceFiles = {}
+collectLuauFiles("src", sourceFiles)
+table.sort(sourceFiles)
+
+test("src 以下のファイルが見つかる", function()
+	assert(#sourceFiles >= 20, "ファイル数が少ない（ルートから実行しているか確認）: " .. #sourceFiles)
+end)
+
+for _, path in sourceFiles do
+	test("構文エラーなし: " .. path, function()
+		luau.compile(fs.readFile(path))
+	end)
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	error("テスト失敗")

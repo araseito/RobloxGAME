@@ -82,12 +82,15 @@ function Remotes.fire(player: Player, name: string, payload: any)
 	if player.Parent == nil then
 		return
 	end
-	(getRemote(name) :: RemoteEvent):FireClient(player, payload)
+	-- 「(」で始まる行は前の行の続きと区別できず構文エラーになるので、いったん変数に入れる（ERROR_LOG #1）
+	local remote = getRemote(name) :: RemoteEvent
+	remote:FireClient(player, payload)
 end
 
 function Remotes.fireAll(name: string, payload: any)
 	assert(Net.isServerEvent(name), "未定義のサーバーイベント: " .. name)
-	(getRemote(name) :: RemoteEvent):FireAllClients(payload)
+	local remote = getRemote(name) :: RemoteEvent
+	remote:FireAllClients(payload)
 end
 
 return Remotes
