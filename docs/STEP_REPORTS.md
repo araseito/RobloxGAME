@@ -35,7 +35,22 @@
 | 単体テスト（`lune run tests/run`） | **26 件すべて成功**。保存データの補完、セッションロック、カードの増減（不足・不正な値・上限・全部取りやめ）、ピースの増減、定義データの整合性（ピースの入手経路 9 つがすべて実在する先を指す、素材すべてに入手先がある、など） |
 | Rojo のビルド（`rojo build`） | 成功 |
 | 型チェック（luau-lsp） | **未実施**。このクラウド環境ではツールのダウンロードが許可されなかった。Studio のスクリプト解析で確認してほしい |
-| Studio でのプレイテスト | **未実施**。このクラウド環境には Studio と Studio MCP がない |
+| Studio でのプレイテスト | 最初は**失敗**：Remotes.luau の構文エラーでサーバーが起動しなかった（ERROR_LOG #1）。修正後は**合格**（下の追記を参照） |
+
+#### 追記：Studio でのプレイテスト結果（2026-11-24、ダイスケさんの PC）
+
+| 確認 | 結果 |
+| --- | --- |
+| サーバーの起動（出力に「Phase 0 起動完了」） | 合格 |
+| 本物の DataStore で動く（「メモリ上の仮ストア」の警告が出ない） | 合格 |
+| 最初の 60 秒のファネルの 1 段目が記録される（`LogOnboardingFunnelStepEvent event fired`） | 合格 |
+| 開発コマンドで葉とピースが増え、HUD に出る（葉 ×18、左上のマス「×4」） | 合格 |
+| 種別の上限を超える追加を拒否する（`false category_full`） | 合格 |
+| 停止してもう一度プレイしても、葉 ×18 と「×4」が残る | **合格（Step 1 の合格条件）** |
+
+気づいた点（Step 2 以降で直す）：
+- パズルボックスの表示が、キャラクターの頭と重なって見える。表示位置は後で調整する
+- コマンドバーはサーバー側に切り替えないと開発コマンドを使えない（手順に書き足した）
 
 ### 3. 残っている仮置き
 
@@ -56,9 +71,9 @@
 2. プロジェクトのフォルダで `rojo serve` を実行し、Studio の Rojo プラグインから Connect する
 3. Test → Clients and Servers で、プレイヤー 1 人でテストを始める
 4. 出力に「[Server] Phase 0 起動完了」が出ること、画面の上に 3×3 のボックス（すべて「?」）、左下に「（カードなし）」が出ることを確認する
-5. サーバー側のコマンドバーで次を実行し、画面の表示が変わることを確認する
-   - `game.ServerStorage.DevTools:Invoke("give", "Player1", "leaf", 3)` → 左下に「葉 ×3」
-   - `game.ServerStorage.DevTools:Invoke("piece", "Player1", "p01")` → 1 マス目が青く光って「!」
-   - `game.ServerStorage.DevTools:Invoke("give", "Player1", "leaf", 30)` → 戻り値が false, category_full で、表示は変わらない
+5. ビューの左上の「サーバー」タブを選んでから（「クライアント」のままだと DevTools が見えない）、コマンドバーで次を実行し、画面の表示が変わることを確認する
+   - `game.ServerStorage.DevTools:Invoke("give", game.Players:GetPlayers()[1].Name, "leaf", 3)` → 左下に「葉 ×3」
+   - `game.ServerStorage.DevTools:Invoke("piece", game.Players:GetPlayers()[1].Name, "p01")` → 1 マス目が青く光って「!」
+   - `print(game.ServerStorage.DevTools:Invoke("give", game.Players:GetPlayers()[1].Name, "leaf", 30))` → 出力に false category_full と出て、表示は変わらない
 6. テストを終了し、もう一度テストを始める → 「葉 ×3」と 1 マス目が残っていれば、保存と読み込みが動いている
    - 出力に「メモリ上の仮ストア」という警告が出ている場合は、手順 1 の設定が効いていない
