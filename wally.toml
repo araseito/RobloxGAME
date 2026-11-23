@@ -1,0 +1,8 @@
+[package]
+name = "local/puzzle-box-p0"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+# Phase 0 は外部ライブラリを入れない方針（出所確認の手間とリスクを避けるため）
+[dependencies]
