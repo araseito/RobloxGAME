@@ -91,15 +91,15 @@ local function resolve(player: Player, ultimateId: string)
 	if def.kind == "dash" then
 		for _, target in CombatService.targetsInDash(player, def.range, def.width) do
 			if target.kind == "enemy" then
-				if CombatService.damageEnemy(player, target.model, power) > 0 then
+				if CombatService.hitEnemy(player, target.model, power, nil) > 0 then
 					hits += 1
 				end
 				if def.stripsAbility then
 					GrantService.removeAbility(target.model, def.stripsAbility)
 				end
 			elseif target.player then
-				-- targetsInDash は対戦相手しか返さないが、damagePlayer でもう一度確かめる
-				if CombatService.damagePlayer(player, target.player, power, nil) > 0 then
+				-- targetsInDash は対戦相手しか返さないが、hitPlayer でもう一度確かめる
+				if CombatService.hitPlayer(player, target.player, power, nil, nil) > 0 then
 					hits += 1
 					if def.stripsAbility then
 						GrantService.removeAbility(target.player, def.stripsAbility)
@@ -108,11 +108,14 @@ local function resolve(player: Player, ultimateId: string)
 			end
 		end
 	elseif def.kind == "single" then
+		-- 単体技は締め扱い：吹き飛ばす（相手が鉄壁なら吹き飛ばない）。
+		-- 付与は撃つ時点で消費済みなので、剛力の「ガードを割る」は乗らない
 		local target = CombatService.singleTarget(player, def.range)
 		if target then
+			local options = { finisher = true }
 			local dealt = if target.kind == "enemy"
-				then CombatService.damageEnemy(player, target.model, power)
-				else CombatService.damagePlayer(player, target.player :: Player, power, nil)
+				then CombatService.hitEnemy(player, target.model, power, options)
+				else CombatService.hitPlayer(player, target.player :: Player, power, nil, options)
 			if dealt > 0 then
 				hits += 1
 			end

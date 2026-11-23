@@ -85,14 +85,12 @@ function GrantService.multipliers(entity: Entity): { moveSpeed: number, attack: 
 	)
 end
 
--- 移動速度などの見た目に出る効果を反映する
+-- 見た目に出る効果を反映する。
+-- プレイヤーの移動速度はガードやスタンにも左右されるので CombatService.refreshSpeed が受け持つ
+-- （Main が onChanged から呼ぶ）
 function GrantService.refreshEffects(entity: Entity)
 	if entity:IsA("Player") then
-		local character = entity.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid.WalkSpeed = Config.Combat.BaseWalkSpeed * GrantService.multipliers(entity).moveSpeed
-		end
+		return
 	else
 		-- 敵は頭上の表示用に属性へ書く（クライアントへは属性で届く）
 		local names = {}

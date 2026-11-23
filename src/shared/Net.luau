@@ -31,6 +31,7 @@ Net.ServerEvents = table.freeze({
 	"Ultimate_Broadcast",
 	"Ring_Update",
 	"Toast",
+	"Knockback", -- 吹き飛ばし（プレイヤーのキャラクターは本人の端末が動かしているので、本人に飛ばしてもらう）
 })
 
 function Net.isFunction(name: string): boolean

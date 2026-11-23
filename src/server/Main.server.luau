@@ -46,6 +46,7 @@ GrantService.setHooks({
 	end,
 	onChanged = function(entity: Instance)
 		if isPlayer(entity) then
+			CombatService.refreshSpeed(entity :: Player) -- 疾風の付け外しで移動速度が変わる
 			CombatSync.push(entity :: Player)
 		end
 	end,
@@ -61,7 +62,7 @@ CombatService.setHooks({
 	onKill = function(player: Player)
 		UltimateService.add(player, Config.Ultimate.OnMonsterKill)
 	end,
-	onShieldChanged = function(player: Player)
+	onStateChanged = function(player: Player)
 		CombatSync.push(player)
 	end,
 })
@@ -84,6 +85,7 @@ UltimateService.setHooks({
 
 EquipmentService.setHooks({
 	onChanged = function(player: Player)
+		CombatService.refreshSpeed(player)
 		CombatSync.push(player)
 	end,
 })
@@ -91,7 +93,7 @@ EquipmentService.setHooks({
 DataService.Loaded:Connect(function(player: Player)
 	Metrics.onboarding(player, DataService.getProfile(player), 1)
 	EquipmentService.validate(player)
-	GrantService.refreshEffects(player)
+	CombatService.refreshSpeed(player)
 	CombatSync.push(player)
 end)
 
@@ -152,6 +154,10 @@ end)
 local actions: { [string]: (Player, any) -> (boolean, string?) } = {
 	equip = EquipmentService.equip,
 	unequip = EquipmentService.unequip,
+	guard = CombatService.setGuard, -- id = true（押した）/ false（離した）
+	dash = function(player: Player)
+		return CombatService.dash(player)
+	end,
 }
 
 Remotes.onInvoke("Action", function(player: Player, kind: any, id: any): Result

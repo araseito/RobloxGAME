@@ -475,6 +475,59 @@ test("突進の範囲", function()
 	eq(CombatLogic.inDashArea(31, 0, 30, 8), false)
 end)
 
+test("4 段コンボの段の進み方", function()
+	eq(CombatLogic.nextComboStep(nil, nil, 0, 1, 4), 1)
+	eq(CombatLogic.nextComboStep(1, 0, 0.5, 1, 4), 2)
+	eq(CombatLogic.nextComboStep(3, 0, 0.5, 1, 4), 4)
+	eq(CombatLogic.nextComboStep(4, 0, 0.5, 1, 4), 1, "4 段目の次は 1 段目")
+	eq(CombatLogic.nextComboStep(2, 0, 1.5, 1, 4), 1, "間があいたら 1 段目")
+	eq(#Config.Combat.ComboDamage, 4)
+end)
+
+local function hit(overrides: { [string]: boolean }): any
+	local input: any = { finisher = false, guarding = false, front = false, guardBreak = false, noKnockback = false }
+	for k, v in overrides do
+		input[k] = v
+	end
+	return CombatLogic.resolveHit(input, 0.2)
+end
+
+test("当たり方：何もなし／締めで吹き飛ぶ／鉄壁は吹き飛ばない", function()
+	local plain = hit({})
+	eq(plain.damageMultiplier, 1)
+	eq(plain.knockback, false)
+	eq(hit({ finisher = true }).knockback, true)
+	eq(hit({ finisher = true, noKnockback = true }).knockback, false)
+end)
+
+test("当たり方：正面ガードで減る／背後はガードが効かない／剛力の締めで割れる", function()
+	local guarded = hit({ guarding = true, front = true })
+	eq(guarded.damageMultiplier, 0.2)
+	eq(hit({ guarding = true, front = true, finisher = true }).knockback, false, "剛力なしの締めはガードで止まる")
+	eq(hit({ guarding = true, front = false, finisher = true }).knockback, true, "背後からはガードが効かない")
+	local broken = hit({ guarding = true, front = true, finisher = true, guardBreak = true })
+	eq(broken.guardBroken, true)
+	eq(broken.damageMultiplier, 1)
+	eq(hit({ guarding = true, front = true, guardBreak = true }).guardBroken, false, "締め以外では割れない")
+end)
+
+test("正面の判定とダッシュのクールダウン", function()
+	eq(CombatLogic.isFront(0, -1, 0, -1), true)
+	eq(CombatLogic.isFront(0, -1, 0, 1), false)
+	eq(CombatLogic.dashCooldown(3, false, 0.5), 3)
+	eq(CombatLogic.dashCooldown(3, true, 0.5), 1.5)
+end)
+
+test("能力 3 種がそれぞれ別の perk を持つ", function()
+	local seen = {}
+	for id, def in AbilityDefs do
+		assert(type(def.perk) == "string", "perk がない " .. id)
+		assert(not seen[def.perk], "perk が重複 " .. id)
+		seen[def.perk] = true
+	end
+	assert(seen.dash_fast and seen.guard_break and seen.no_knockback, "perk の種類")
+end)
+
 test("必殺技の既定の技が定義にある", function()
 	assert(UltimateDefs[Config.Ultimate.DefaultUltimate], "DefaultUltimate")
 	assert(AbilityDefs[Config.Dummy.SelfGrant], "Dummy.SelfGrant")
@@ -543,12 +596,12 @@ for _, listName in { "Functions", "ClientEvents", "ServerEvents" } do
 	end
 end
 
-test("Net の Remote が 12 個", function()
+test("Net の Remote が 13 個", function()
 	local n = 0
 	for _ in remoteNames do
 		n += 1
 	end
-	eq(n, 12)
+	eq(n, 13)
 end)
 
 local REMOTE_PATTERNS: { { pattern: string, kinds: { string } } } = {
@@ -564,6 +617,13 @@ local REMOTE_PATTERNS: { { pattern: string, kinds: { string } } } = {
 for _, path in sourceFiles do
 	local source = fs.readFile(path)
 	local dir = dirOf(path)
+	test("「(」で始まる行がない（ERROR_LOG #1）: " .. path, function()
+		local lineNumber = 0
+		for line in string.gmatch(source .. "\n", "(.-)\n") do
+			lineNumber += 1
+			assert(not string.match(line, "^%s*%("), "行 " .. lineNumber .. " が「(」で始まっている")
+		end
+	end)
 	test("参照先が実在する: " .. path, function()
 		for name in string.gmatch(source, "require%(script%.Parent%.([%w_]+)%)") do
 			assert(moduleExists(dir, name), "require 先がない: " .. name)

@@ -21,6 +21,7 @@ local function send(player: Player)
 	if player.Parent == nil then
 		return
 	end
+	local fighter = CombatService.view(player)
 	Remotes.fire(player, "State_Delta", {
 		combat = {
 			grants = GrantService.view(player),
@@ -28,7 +29,12 @@ local function send(player: Player)
 			gaugeMax = Config.Ultimate.GaugeMax,
 			inCombat = BattleStateService.inCombat(player),
 			casting = UltimateService.isCasting(player),
-			shield = CombatService.shieldOf(player),
+			shield = fighter.shield,
+			guarding = fighter.guarding,
+			stunnedUntil = fighter.stunnedUntil,
+			dashReadyAt = fighter.dashReadyAt,
+			comboStep = fighter.comboStep,
+			comboHits = fighter.comboHits,
 		},
 	})
 end
