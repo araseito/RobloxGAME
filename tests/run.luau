@@ -344,6 +344,142 @@ test("装備はすべて付与上限 +1 を持つ", function()
 	end
 end)
 
+-- GrantLogic（Step 2） -----------------------------------------------------
+
+local GrantLogic = require("../src/shared/Logic/GrantLogic")
+local CombatLogic = require("../src/shared/Logic/CombatLogic")
+
+local function grantsOf(...: string): { any }
+	local list = {}
+	for i, id in { ... } do
+		table.insert(list, { ability = id, seq = i })
+	end
+	return list
+end
+
+test("付与上限は基本 10、装備 1 つにつき +1", function()
+	eq(GrantLogic.capacity(10, {}, ItemDefs), 10)
+	eq(GrantLogic.capacity(10, { weapon = "wooden_blade" }, ItemDefs), 11)
+	eq(GrantLogic.capacity(10, { weapon = "wooden_blade", armor = "travel_coat" }, ItemDefs), 12)
+end)
+
+test("付与できる・同じ能力は 1 つまで・上限を超えられない", function()
+	local ok, g = GrantLogic.apply({}, {}, "might", 0, 10, AbilityDefs, 1)
+	eq(ok, true)
+	eq(GrantLogic.used(g, AbilityDefs), 4)
+	local ok2, reason2 = GrantLogic.apply(g, {}, "might", 0, 10, AbilityDefs, 2)
+	eq(ok2, false)
+	eq(reason2, "already_active")
+	local _, g3 = GrantLogic.apply(g, {}, "bulwark", 0, 10, AbilityDefs, 2) -- 8
+	local ok4, reason4 = GrantLogic.apply(g3, {}, "gale", 0, 10, AbilityDefs, 3) -- 8 + 3 = 11 > 10
+	eq(ok4, false)
+	eq(reason4, "over_capacity")
+	local ok5 = GrantLogic.apply(g3, {}, "gale", 0, 11, AbilityDefs, 3) -- 装備 1 つで 11
+	eq(ok5, true)
+	eq((GrantLogic.apply({}, {}, "nope", 0, 10, AbilityDefs, 1)), false)
+	eq((GrantLogic.apply({}, {}, 5, 0, 10, AbilityDefs, 1)), false)
+end)
+
+test("解除すると 5 秒付け直せない", function()
+	local g = grantsOf("might", "gale")
+	local ok, kept, cds, released = GrantLogic.release(g, {}, "might", 100, 5)
+	eq(ok, true)
+	eq(#kept, 1)
+	eq(released[1], "might")
+	eq(cds.might, 105)
+	local okA, reasonA = GrantLogic.apply(kept, cds, "might", 104.9, 10, AbilityDefs, 3)
+	eq(okA, false)
+	eq(reasonA, "cooldown")
+	eq((GrantLogic.apply(kept, cds, "might", 105, 10, AbilityDefs, 3)), true)
+	eq(#g, 2, "元は変わらない")
+end)
+
+test("全解除と、付いていない能力の解除", function()
+	local ok, kept, _, released = GrantLogic.release(grantsOf("might", "gale"), {}, "all", 0, 5)
+	eq(ok, true)
+	eq(#kept, 0)
+	eq(#released, 2)
+	local ok2, reason2 = GrantLogic.release({}, {}, "all", 0, 5)
+	eq(ok2, false)
+	eq(reason2, "not_active")
+end)
+
+test("剥がしの代価は一番安い付与（同じなら古いもの）", function()
+	eq(GrantLogic.pickLowest(grantsOf("might", "gale", "bulwark"), AbilityDefs), "gale")
+	eq(GrantLogic.pickLowest(grantsOf("bulwark", "might"), AbilityDefs), "bulwark")
+	eq(GrantLogic.pickLowest({}, AbilityDefs), nil)
+end)
+
+test("必殺技は一番高い付与の技（同じなら新しいもの）", function()
+	eq(GrantLogic.pickHighest(grantsOf("gale", "might"), AbilityDefs), "might")
+	eq(GrantLogic.pickHighest(grantsOf("might", "bulwark"), AbilityDefs), "bulwark")
+	eq(GrantLogic.pickHighest(grantsOf("gale"), AbilityDefs), "gale")
+	eq(GrantLogic.pickHighest({}, AbilityDefs), nil)
+end)
+
+test("remove は 1 つだけ取り除く", function()
+	local found, kept = GrantLogic.remove(grantsOf("might", "gale"), "gale")
+	eq(found, true)
+	eq(#kept, 1)
+	local found2 = GrantLogic.remove(kept, "gale")
+	eq(found2, false)
+end)
+
+test("倍率：付与と装備を足し算で重ねる", function()
+	local m = GrantLogic.multipliers(grantsOf("gale", "might", "bulwark"), AbilityDefs,
+		{ weapon = "wooden_blade", armor = "travel_coat" }, ItemDefs, 0.1)
+	assert(math.abs(m.moveSpeed - 1.30) < 1e-9, "moveSpeed")
+	assert(math.abs(m.attack - 1.30) < 1e-9, "attack")
+	assert(math.abs(m.damageTaken - 0.70) < 1e-9, "damageTaken")
+	local none = GrantLogic.multipliers({}, AbilityDefs, {}, ItemDefs, 0.1)
+	eq(none.attack, 1)
+end)
+
+-- CombatLogic（Step 2） ----------------------------------------------------
+
+test("ダメージ計算と対人の上限", function()
+	eq(CombatLogic.damage(10, 1.25, 1, nil), 12.5)
+	eq(CombatLogic.damage(10, 1, 0.75, nil), 7.5)
+	eq(CombatLogic.damage(100, 1, 1, 35), 35)
+	eq(CombatLogic.damage(-5, 1, 1, nil), 0)
+	eq(CombatLogic.damage(0 / 0, 1, 1, nil), 0)
+end)
+
+test("シールドの吸収", function()
+	local s, d = CombatLogic.absorb(30, 10)
+	eq(s, 20)
+	eq(d, 0)
+	s, d = CombatLogic.absorb(5, 10)
+	eq(s, 0)
+	eq(d, 5)
+	s, d = CombatLogic.absorb(0, 10)
+	eq(d, 10)
+end)
+
+test("ゲージは 0〜100 に収まり、不正な値は無視", function()
+	eq(CombatLogic.addGauge(95, 8, 100), 100)
+	eq(CombatLogic.addGauge(10, -5, 100), 10)
+	eq(CombatLogic.addGauge(10, 0 / 0, 100), 10)
+	eq(CombatLogic.addGauge(10, math.huge, 100), 10)
+end)
+
+test("必殺技の威力 = 30 + 消費コスト × 8", function()
+	eq(CombatLogic.ultimatePower(0, Config.Ultimate.BasePower, Config.Ultimate.PowerPerCost), 30)
+	eq(CombatLogic.ultimatePower(11, Config.Ultimate.BasePower, Config.Ultimate.PowerPerCost), 118)
+end)
+
+test("突進の範囲", function()
+	eq(CombatLogic.inDashArea(10, 3, 30, 8), true)
+	eq(CombatLogic.inDashArea(10, 5, 30, 8), false)
+	eq(CombatLogic.inDashArea(-1, 0, 30, 8), false)
+	eq(CombatLogic.inDashArea(31, 0, 30, 8), false)
+end)
+
+test("必殺技の既定の技が定義にある", function()
+	assert(UltimateDefs[Config.Ultimate.DefaultUltimate], "DefaultUltimate")
+	assert(AbilityDefs[Config.Dummy.SelfGrant], "Dummy.SelfGrant")
+end)
+
 -- 構文チェック ---------------------------------------------------------------
 -- src 以下の全 .luau ファイルをコンパイルして、構文エラーがないか確かめる（ERROR_LOG #1）
 -- リポジトリのルートから `lune run tests/run` で実行する前提
@@ -373,6 +509,74 @@ end)
 for _, path in sourceFiles do
 	test("構文エラーなし: " .. path, function()
 		luau.compile(fs.readFile(path))
+	end)
+end
+
+-- 参照チェック ---------------------------------------------------------------
+-- Studio がない環境でも見つけられる打ち間違いを調べる
+-- ・require(script.Parent.X) / require(Server.X) の X が同じフォルダに実在するか
+-- ・コードに書いた Remote 名が Net.luau の一覧にあるか
+
+local function exists(path: string): boolean
+	return fs.isFile(path)
+end
+
+local function dirOf(path: string): string
+	return string.match(path, "^(.*)/[^/]+$") or "."
+end
+
+local function moduleExists(dir: string, name: string): boolean
+	return exists(dir .. "/" .. name .. ".luau")
+		or exists(dir .. "/" .. name .. ".server.luau")
+		or exists(dir .. "/" .. name .. ".client.luau")
+		or fs.isDir(dir .. "/" .. name)
+end
+
+-- Net.luau は game を使うので Lune で require できない。文字列として読んで名前を取り出す
+local netSource = fs.readFile("src/shared/Net.luau")
+local remoteNames: { [string]: string } = {}
+for _, listName in { "Functions", "ClientEvents", "ServerEvents" } do
+	local block = string.match(netSource, "Net%." .. listName .. " = table%.freeze%(%{(.-)%}%)")
+	assert(block, "Net." .. listName .. " が読めない")
+	for name in string.gmatch(block, '"([%w_]+)"') do
+		remoteNames[name] = listName
+	end
+end
+
+test("Net の Remote が 12 個", function()
+	local n = 0
+	for _ in remoteNames do
+		n += 1
+	end
+	eq(n, 12)
+end)
+
+local REMOTE_PATTERNS: { { pattern: string, kinds: { string } } } = {
+	{ pattern = 'Net%.getFunction%("([%w_]+)"', kinds = { "Functions" } },
+	{ pattern = 'Net%.getEvent%("([%w_]+)"', kinds = { "ClientEvents", "ServerEvents" } },
+	{ pattern = 'invoke%("([%w_]+)"', kinds = { "Functions" } },
+	{ pattern = 'Remotes%.onInvoke%("([%w_]+)"', kinds = { "Functions" } },
+	{ pattern = 'Remotes%.onEvent%("([%w_]+)"', kinds = { "ClientEvents" } },
+	{ pattern = 'Remotes%.fire%([%w_%.]+, "([%w_]+)"', kinds = { "ServerEvents" } },
+	{ pattern = 'Remotes%.fireAll%("([%w_]+)"', kinds = { "ServerEvents" } },
+}
+
+for _, path in sourceFiles do
+	local source = fs.readFile(path)
+	local dir = dirOf(path)
+	test("参照先が実在する: " .. path, function()
+		for name in string.gmatch(source, "require%(script%.Parent%.([%w_]+)%)") do
+			assert(moduleExists(dir, name), "require 先がない: " .. name)
+		end
+		for name in string.gmatch(source, "require%(Server%.([%w_]+)%)") do
+			assert(moduleExists("src/server", name), "require 先がない: " .. name)
+		end
+		for _, rule in REMOTE_PATTERNS do
+			for name in string.gmatch(source, rule.pattern) do
+				local kind = remoteNames[name]
+				assert(kind and table.find(rule.kinds, kind), "Net にない（または種類が違う）Remote: " .. name)
+			end
+		end
 	end)
 end
 

@@ -7,9 +7,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Net"))
 local StateStore = require(script.Parent.StateStore)
 local HUD = require(script.Parent.HUD)
+local Toast = require(script.Parent.Toast)
+local Messages = require(script.Parent.Messages)
+local CombatHUD = require(script.Parent.CombatHUD)
+local UltimateFx = require(script.Parent.UltimateFx)
 
 local player = Players.LocalPlayer
-HUD.mount(player:WaitForChild("PlayerGui") :: PlayerGui)
+local gui = HUD.mount(player:WaitForChild("PlayerGui") :: PlayerGui)
+Toast.mount(gui)
+CombatHUD.mount(gui)
+UltimateFx.mount(gui)
 
 -- スナップショットより先に差分の受け口をつなぐ（取りこぼし防止）
 Net.getEvent("State_Delta").OnClientEvent:Connect(function(delta: any)
@@ -18,8 +25,8 @@ Net.getEvent("State_Delta").OnClientEvent:Connect(function(delta: any)
 	end
 end)
 
-Net.getEvent("Toast").OnClientEvent:Connect(function(message: any)
-	print("[Toast] " .. tostring(message)) -- Step 1 は仮表示
+Net.getEvent("Toast").OnClientEvent:Connect(function(reason: any)
+	Toast.show(Messages.text(reason))
 end)
 
 local getSnapshot = Net.getFunction("GetSnapshot")

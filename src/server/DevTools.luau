@@ -6,6 +6,7 @@
 --   game.ServerStorage.DevTools:Invoke("piece", "Player1", "p01")
 --   game.ServerStorage.DevTools:Invoke("show", "Player1")
 --   game.ServerStorage.DevTools:Invoke("save", "Player1")
+--   game.ServerStorage.DevTools:Invoke("gauge", "Player1")   -- 戦闘状態にしてゲージを満タンにする
 -- ※ コマンドバーから require するとモジュールが別の実体になることがあるため、BindableFunction 経由にしている
 
 local HttpService = game:GetService("HttpService")
@@ -15,6 +16,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local DataService = require(script.Parent.DataService)
 local InventoryService = require(script.Parent.InventoryService)
+local UltimateService = require(script.Parent.UltimateService)
 
 local DevTools = {}
 
@@ -62,6 +64,14 @@ local commands: { [string]: (...any) -> any } = {
 			return "player_not_found"
 		end
 		return DataService.saveNow(player)
+	end,
+	gauge = function(name)
+		local player = findPlayer(name)
+		if not player then
+			return "player_not_found"
+		end
+		UltimateService.fillForTest(player)
+		return true
 	end,
 }
 
