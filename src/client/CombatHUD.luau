@@ -271,8 +271,9 @@ function CombatHUD.mount(gui: ScreenGui)
 	-- 右側のボタン列
 	local column = Instance.new("Frame")
 	column.Name = "CombatButtons"
-	column.AnchorPoint = Vector2.new(1, 0.5)
-	column.Position = UDim2.new(1, -12, 0.5, 0)
+	-- 右上のパズルボックス（高さ約 166px）の下から並べる。縦中央に置くとボックスと重なった（Step 2 のテストで判明）
+	column.AnchorPoint = Vector2.new(1, 0)
+	column.Position = UDim2.new(1, -12, 0, 184)
 	column.Size = UDim2.fromOffset(96, 0)
 	column.AutomaticSize = Enum.AutomaticSize.Y
 	column.BackgroundTransparency = 1
