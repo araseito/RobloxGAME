@@ -11,12 +11,15 @@ local Toast = require(script.Parent.Toast)
 local Messages = require(script.Parent.Messages)
 local CombatHUD = require(script.Parent.CombatHUD)
 local UltimateFx = require(script.Parent.UltimateFx)
+local CombatFx = require(script.Parent.CombatFx)
 
 local player = Players.LocalPlayer
-local gui = HUD.mount(player:WaitForChild("PlayerGui") :: PlayerGui)
+local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
+local gui = HUD.mount(playerGui)
 Toast.mount(gui)
 CombatHUD.mount(gui)
 UltimateFx.mount(gui)
+CombatFx.mount(playerGui)
 
 -- スナップショットより先に差分の受け口をつなぐ（取りこぼし防止）
 Net.getEvent("State_Delta").OnClientEvent:Connect(function(delta: any)

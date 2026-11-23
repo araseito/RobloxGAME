@@ -596,12 +596,12 @@ for _, listName in { "Functions", "ClientEvents", "ServerEvents" } do
 	end
 end
 
-test("Net の Remote が 13 個", function()
+test("Net の Remote が 14 個", function()
 	local n = 0
 	for _ in remoteNames do
 		n += 1
 	end
-	eq(n, 13)
+	eq(n, 14)
 end)
 
 local REMOTE_PATTERNS: { { pattern: string, kinds: { string } } } = {

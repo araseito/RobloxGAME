@@ -32,6 +32,7 @@ Net.ServerEvents = table.freeze({
 	"Ring_Update",
 	"Toast",
 	"Knockback", -- 吹き飛ばし（プレイヤーのキャラクターは本人の端末が動かしているので、本人に飛ばしてもらう）
+	"Combat_Fx", -- 攻撃の演出（腕の振り・当たったときの光と数字）を全員に知らせる。見た目だけで、結果には関係しない
 })
 
 function Net.isFunction(name: string): boolean

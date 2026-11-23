@@ -80,9 +80,22 @@ local function stateOf(player: Player): PlayerState
 end
 
 local function notifyState(player: Player)
+	-- ガードとひるみはキャラクターの属性にも書く（周りのプレイヤーの画面で縁取りを出すため。見た目だけ）
+	local character = player.Character
+	local state = playerStates[player]
+	if character then
+		character:SetAttribute("Guarding", if state then state.guarding else false)
+		local untilAt = stunnedUntil[player]
+		character:SetAttribute("Stunned", untilAt ~= nil and untilAt > workspace:GetServerTimeNow())
+	end
 	if hooks.onStateChanged then
 		hooks.onStateChanged(player)
 	end
+end
+
+-- 演出を全員に知らせる（腕の振り・当たったときの光と数字）。結果には関係しない
+local function fx(payload: { [string]: any })
+	Remotes.fireAll("Combat_Fx", payload)
 end
 
 local function hasPerk(fighter: Fighter, perk: string): boolean
@@ -307,6 +320,7 @@ function CombatService.hitEnemy(attacker: Player, model: Model, base: number, op
 	end
 
 	enemy.health = math.max(0, enemy.health - amount)
+	fx({ t = "hit", target = model, amount = amount, finisher = outcome.knockback, guarded = false, broken = false })
 	BattleStateService.notePve(attacker, model)
 	if hooks.onDealt then
 		hooks.onDealt(attacker, amount)
@@ -387,6 +401,16 @@ function CombatService.hitPlayer(attacker: Player?, victim: Player, base: number
 
 	if sourceEnemy then
 		BattleStateService.notePve(victim, sourceEnemy)
+	end
+	if amount > 0 or outcome.guardBroken or outcome.damageMultiplier < 1 then
+		fx({
+			t = "hit",
+			target = character,
+			amount = amount,
+			finisher = outcome.knockback,
+			guarded = outcome.damageMultiplier < 1,
+			broken = outcome.guardBroken,
+		})
 	end
 	if amount <= 0 then
 		return 0
@@ -469,6 +493,8 @@ function CombatService.basicAttack(player: Player, target: any): string
 	local options: HitOptions = { finisher = step == hits, fromPosition = root.Position }
 	local base = Config.Combat.ComboDamage[step]
 	notifyState(player)
+	-- 腕の振りは当たる前に出す（当たらなくても、戦闘状態でない相手でも振る動きは見える）
+	fx({ t = "swing", userId = player.UserId, step = step, finisher = step == hits })
 
 	if enemy then
 		CombatService.hitEnemy(player, model, base, options)

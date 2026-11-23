@@ -10,6 +10,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -110,6 +111,25 @@ local function updateLabel(model: Model, label: TextLabel)
 	label.Text = ("練習用の木人  HP %d/%d\n%s%s"):format(math.ceil(health :: number), maxHealth :: number, grantText, status)
 end
 
+-- 腕の角度（度）。0 = 前に水平、プラスで振り上げ、マイナスで振り下ろし。肩を軸に回す
+local function armCFrame(model: Model, angle: number): CFrame
+	return model:GetPivot() * CFrame.new(0, 1.2, -1) * CFrame.Angles(math.rad(angle), 0, 0) * CFrame.new(0, 0, -1.5)
+end
+
+local function poseArm(model: Model, angle: number, seconds: number)
+	local arm = model:FindFirstChild("Arm")
+	if not arm or not arm:IsA("BasePart") then
+		return
+	end
+	if seconds <= 0 then
+		arm.CFrame = armCFrame(model, angle)
+		return
+	end
+	TweenService:Create(arm, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		CFrame = armCFrame(model, angle),
+	}):Play()
+end
+
 local function setColor(model: Model, color: Color3)
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") then
@@ -178,6 +198,7 @@ function TrainingDummy.init()
 	model.AttributeChanged:Connect(function()
 		updateLabel(model, label)
 	end)
+	poseArm(model, 0, 0)
 	regrant()
 	updateLabel(model, label)
 
@@ -210,8 +231,11 @@ function TrainingDummy.init()
 			end
 
 			face(model, root.Position)
+			poseArm(model, 0, 0)
 			model:SetAttribute("Telegraph", true)
 			setColor(model, WARNING)
+			-- 予備動作：腕をゆっくり振り上げる
+			poseArm(model, 110, Config.Dummy.TelegraphSeconds * 0.8)
 
 			-- 予備動作の間ずっと見張る。一度でもひるんだ（締めで吹き飛ばされた）・倒されたら大振りは出ない
 			-- （ひるみ 0.6 秒は予備動作 0.8 秒より短いので、最後に 1 回確かめるだけだと止められないことがある）
@@ -227,8 +251,13 @@ function TrainingDummy.init()
 			model:SetAttribute("Telegraph", false)
 			setColor(model, WOOD)
 
-			if not interrupted then
+			if interrupted then
+				poseArm(model, 0, 0.2) -- 止められた：腕を下ろす
+			else
+				-- 大振り：一気に振り下ろしてから戻す
+				poseArm(model, -35, 0.08)
 				CombatService.enemySwing(model, Config.Dummy.AttackDamage, Config.Dummy.AttackRange)
+				task.delay(0.25, poseArm, model, 0, 0.3)
 			end
 		end
 	end)

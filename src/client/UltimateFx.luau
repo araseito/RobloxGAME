@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local UltimateDefs = require(Shared:WaitForChild("UltimateDefs"))
 local Net = require(Shared:WaitForChild("Net"))
+local CombatFx = require(script.Parent.CombatFx)
 
 local UltimateFx = {}
 
@@ -63,6 +64,10 @@ local function showResolve(payload: any)
 		return
 	end
 	sub.Text = ("%s / 威力 %d（消費コスト %d）"):format(casterName(payload.userId), payload.power or 0, payload.consumedCost or 0)
+	-- 自分が撃った必殺技が決まった瞬間は画面を強く揺らす
+	if payload.userId == Players.LocalPlayer.UserId then
+		CombatFx.bigShake()
+	end
 end
 
 function UltimateFx.mount(gui: ScreenGui)

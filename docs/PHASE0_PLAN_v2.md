@@ -265,7 +265,7 @@ v1 から消えたもの：SpellService、SpellDefs、SpellUI、MetricsService�
 }
 ```
 
-### Remote（v1 は 19 → v2 は 12 → Step 2 改訂で 13）
+### Remote（v1 は 19 → v2 は 12 → Step 2 改訂で 14）
 
 クライアントからサーバーへ（8）：
 - `GetSnapshot`
@@ -277,12 +277,13 @@ v1 から消えたもの：SpellService、SpellDefs、SpellUI、MetricsService�
 - `Piece_Place(pieceId)`
 - `Action(kind, id)`（装備・ガード・ダッシュ・アイテム使用・合成・移動・合成画面を開いた、をまとめたもの。kind ごとにサーバーで検証）
 
-サーバーからクライアントへ（5。Step 2 改訂で `Knockback` を追加）：
+サーバーからクライアントへ（6。Step 2 改訂で `Knockback` と `Combat_Fx` を追加）：
 - `State_Delta`
 - `Ultimate_Broadcast`
 - `Ring_Update`
 - `Toast`
 - `Knockback`（吹き飛ばし。キャラクターは本人の端末が動かしているので、本人に飛ばしてもらう）
+- `Combat_Fx`（腕の振り・当たったときの光と数字を全員に。見た目だけ）
 
 リングへの出入り、ピースの拾得、掲示板はすべてサーバー側の接触判定か ProximityPrompt で扱うので、Remote は要りません。
 
