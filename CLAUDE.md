@@ -4,6 +4,7 @@
 参照：`docs/blueprint.pdf`、`docs/PHASE0_PLAN_v1.md`。
 
 ## 進め方
+- GitHub（origin）を正とする。作業の前に `git fetch` し、他（クラウドのセッションなど）から入った変更と、今のブランチの遅れ・未 push を確かめる。遅れていたら、取り込む前に利用者に伝える
 - Step 単位で実装する。Step の終わりに Studio MCP でプレイテストし、`docs/STEP_REPORTS.md` に 4 点（変更ファイル／テスト結果／仮置き／迷った点）を書く
 - 書く前に `docs/ERROR_LOG.md` を読み、同じ失敗を繰り返さない。新しいエラーはそこに追記する
 - 仕様にない機能は足さない。迷ったら仮置きして報告する
