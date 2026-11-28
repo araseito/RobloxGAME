@@ -12,6 +12,8 @@ local Messages = require(script.Parent.Messages)
 local CombatHUD = require(script.Parent.CombatHUD)
 local UltimateFx = require(script.Parent.UltimateFx)
 local CombatFx = require(script.Parent.CombatFx)
+local QuestBoardUI = require(script.Parent.QuestBoardUI)
+local ExploreSpots = require(script.Parent.ExploreSpots)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
@@ -20,6 +22,8 @@ Toast.mount(gui)
 CombatHUD.mount(gui)
 UltimateFx.mount(gui)
 CombatFx.mount(playerGui)
+QuestBoardUI.mount(gui)
+ExploreSpots.mount()
 
 -- スナップショットより先に差分の受け口をつなぐ（取りこぼし防止）
 Net.getEvent("State_Delta").OnClientEvent:Connect(function(delta: any)

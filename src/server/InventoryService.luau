@@ -9,6 +9,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local ItemDefs = require(Shared:WaitForChild("ItemDefs"))
 local PieceDefs = require(Shared:WaitForChild("PieceDefs"))
 local InventoryLogic = require(Shared:WaitForChild("Logic"):WaitForChild("InventoryLogic"))
+local PuzzleLogic = require(Shared:WaitForChild("Logic"):WaitForChild("PuzzleLogic"))
 
 local DataService = require(script.Parent.DataService)
 local StateSync = require(script.Parent.StateSync)
@@ -69,6 +70,21 @@ function InventoryService.removeUnplacedPiece(player: Player, pieceId: string): 
 		return false, "not_loaded"
 	end
 	local ok, result = InventoryLogic.removeUnplacedPiece(profile.pieces, pieceId)
+	if not ok then
+		return false, result
+	end
+	profile.pieces = result
+	StateSync.push(player, "pieces")
+	return true, nil
+end
+
+-- 未装着のピースを 1 枚ボックスにはめる（はめたピースは二度と失わない）
+function InventoryService.placePiece(player: Player, pieceId: any): (boolean, string?)
+	local profile = DataService.getProfile(player)
+	if profile == nil then
+		return false, "not_loaded"
+	end
+	local ok, result = PuzzleLogic.place(profile.pieces, pieceId, PieceDefs)
 	if not ok then
 		return false, result
 	end

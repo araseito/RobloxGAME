@@ -35,10 +35,17 @@ for _, name in Metrics.Events do
 	knownEvents[name] = true
 end
 
-function Metrics.event(player: Player, eventName: string, value: number?)
+-- field：内訳（ピースの入手経路など）。公式ダッシュボードでは CustomField01 として分けて見られる
+function Metrics.event(player: Player, eventName: string, value: number?, field: string?)
 	assert(knownEvents[eventName], "未定義の計測イベント: " .. eventName)
 	local ok, err = pcall(function()
-		AnalyticsService:LogCustomEvent(player, eventName, value or 1)
+		if field then
+			AnalyticsService:LogCustomEvent(player, eventName, value or 1, {
+				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = field,
+			})
+		else
+			AnalyticsService:LogCustomEvent(player, eventName, value or 1)
+		end
 	end)
 	if not ok then
 		warn("[Metrics] " .. eventName .. ": " .. tostring(err))

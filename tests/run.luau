@@ -4,6 +4,8 @@
 local ProfileSchema = require("../src/shared/Logic/ProfileSchema")
 local SessionLock = require("../src/shared/Logic/SessionLock")
 local InventoryLogic = require("../src/shared/Logic/InventoryLogic")
+local PuzzleLogic = require("../src/shared/Logic/PuzzleLogic")
+local QuestLogic = require("../src/shared/Logic/QuestLogic")
 
 local Config = require("../src/shared/Config")
 local AbilityDefs = require("../src/shared/AbilityDefs")
@@ -190,6 +192,111 @@ test("未装着ピースの上限", function()
 	local ok, reason = InventoryLogic.addUnplacedPiece({ placed = {}, unplaced = { p01 = 20 } }, "p02", PieceDefs, 20)
 	eq(ok, false)
 	eq(reason, "pieces_full")
+end)
+
+-- PuzzleLogic（Step 3） -----------------------------------------------------
+
+test("はめると未装着から 1 枚減り、はまったものに入る", function()
+	local pieces = { placed = {}, unplaced = { p01 = 2 } }
+	local ok, result = PuzzleLogic.place(pieces, "p01", PieceDefs)
+	eq(ok, true)
+	eq(result.placed.p01, true)
+	eq(result.unplaced.p01, 1, "重複した分は未装着に残る")
+	eq(pieces.placed.p01, nil, "元のテーブルは書き換えない")
+	eq(pieces.unplaced.p01, 2)
+end)
+
+test("最後の 1 枚をはめると未装着から消える", function()
+	local _, result = PuzzleLogic.place({ placed = {}, unplaced = { p05 = 1 } }, "p05", PieceDefs)
+	eq(result.unplaced.p05, nil)
+end)
+
+test("はめられないとき：持っていない・もうはまっている・未定義・型違い", function()
+	local ok, reason = PuzzleLogic.place({ placed = {}, unplaced = {} }, "p01", PieceDefs)
+	eq(ok, false)
+	eq(reason, "piece_not_owned")
+	ok, reason = PuzzleLogic.place({ placed = { p01 = true }, unplaced = { p01 = 1 } }, "p01", PieceDefs)
+	eq(ok, false)
+	eq(reason, "already_placed", "重複ははめられない")
+	ok, reason = PuzzleLogic.place({ placed = {}, unplaced = { p99 = 1 } }, "p99", PieceDefs)
+	eq(reason, "unknown_id")
+	ok, reason = PuzzleLogic.place({ placed = {}, unplaced = {} }, 5, PieceDefs)
+	eq(reason, "unknown_id")
+end)
+
+test("完成の判定と数", function()
+	local placed = {}
+	for id in PieceDefs do
+		eq(PuzzleLogic.isComplete(placed, PieceDefs), false)
+		placed[id] = true
+	end
+	eq(PuzzleLogic.isComplete(placed, PieceDefs), true)
+	eq(PuzzleLogic.placedCount(placed, PieceDefs), 9)
+	placed.p99 = true
+	eq(PuzzleLogic.placedCount(placed, PieceDefs), 9, "未定義の ID は数えない")
+end)
+
+test("次にはめられるピースは grid の小さい順で、はまっているものは飛ばす", function()
+	eq(PuzzleLogic.nextPlaceable({ placed = {}, unplaced = {} }, PieceDefs), nil)
+	eq(PuzzleLogic.nextPlaceable({ placed = {}, unplaced = { p07 = 1, p03 = 1 } }, PieceDefs), "p03")
+	eq(PuzzleLogic.nextPlaceable({ placed = { p03 = true }, unplaced = { p07 = 1, p03 = 1 } }, PieceDefs), "p07")
+	eq(PuzzleLogic.nextPlaceable({ placed = { p03 = true }, unplaced = { p03 = 2 } }, PieceDefs), nil, "重複だけなら nil")
+end)
+
+-- QuestLogic（Step 3） ------------------------------------------------------
+
+test("倒した数を数え、目標で止まる", function()
+	local quests = {}
+	local changed
+	for _ = 1, 5 do
+		quests, changed = QuestLogic.record(quests, QuestDefs, { kind = "kill", monster = "moripon" })
+	end
+	eq(quests.q01.progress, QuestDefs.q01.goal.count, "目標を超えて数えない")
+	eq(changed, false, "目標に届いたあとは進まない")
+	eq(quests.q03, nil, "関係ないクエストは進まない")
+end)
+
+test("関係ない出来事では進まない（木人・別の種類）", function()
+	local quests, changed = QuestLogic.record({}, QuestDefs, { kind = "kill", monster = "dummy" })
+	eq(changed, false)
+	eq(next(quests), nil)
+	quests, changed = QuestLogic.record({}, QuestDefs, { kind = "craft", item = "travel_coat" })
+	eq(changed, true)
+	eq(quests.q02.progress, 1)
+end)
+
+test("目標に届いたものが pending に出て、markDone で消える", function()
+	local quests = { q01 = { progress = 3 }, q03 = { progress = 3 }, q02 = { progress = 0 } }
+	local pending = QuestLogic.pending(quests, QuestDefs)
+	eq(#pending, 2)
+	eq(pending[1], "q01", "order の順")
+	eq(pending[2], "q03")
+	local done = QuestLogic.markDone(quests, "q01")
+	eq(done.q01.done, true)
+	eq(quests.q01.done, nil, "元のテーブルは書き換えない")
+	eq(#QuestLogic.pending(done, QuestDefs), 1)
+	local after, changed = QuestLogic.record(done, QuestDefs, { kind = "kill", monster = "moripon" })
+	eq(changed, false, "達成済みは進まない")
+	eq(after.q01.progress, 3)
+end)
+
+test("探索の隠し場所からピースを引ける", function()
+	eq(QuestLogic.explorePiece("e01", PieceDefs), "p01")
+	eq(QuestLogic.explorePiece("e02", PieceDefs), "p02")
+	eq(QuestLogic.explorePiece("e99", PieceDefs), nil)
+	eq(QuestLogic.explorePiece(1, PieceDefs), nil)
+end)
+
+test("町に最初の探索ピースがある（最初の 60 秒）", function()
+	eq(#AreaDefs.town.exploreSpots >= 1, true)
+	eq(QuestLogic.explorePiece(AreaDefs.town.exploreSpots[1], PieceDefs) ~= nil, true)
+	eq(#Config.Explore.SpawnOffset, 3)
+	eq(#Config.QuestBoard.SpawnOffset, 3)
+end)
+
+test("完成の称号が Config にある", function()
+	eq(Config.Titles.first_picture ~= nil, true)
+	eq(type(Config.Badge.CompletionBadgeId), "number")
 end)
 
 -- 定義データの整合性 --------------------------------------------------------

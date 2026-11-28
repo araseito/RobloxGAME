@@ -7,6 +7,7 @@
 --   game.ServerStorage.DevTools:Invoke("show", "Player1")
 --   game.ServerStorage.DevTools:Invoke("save", "Player1")
 --   game.ServerStorage.DevTools:Invoke("gauge", "Player1")   -- 戦闘状態にしてゲージを満タンにする
+--   game.ServerStorage.DevTools:Invoke("kill", "Player1", "moripon")   -- そのモンスターを 1 体倒したことにする（クエストの確認用）
 -- ※ コマンドバーから require するとモジュールが別の実体になることがあるため、BindableFunction 経由にしている
 
 local HttpService = game:GetService("HttpService")
@@ -17,6 +18,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local DataService = require(script.Parent.DataService)
 local InventoryService = require(script.Parent.InventoryService)
 local UltimateService = require(script.Parent.UltimateService)
+local QuestService = require(script.Parent.QuestService)
 
 local DevTools = {}
 
@@ -71,6 +73,14 @@ local commands: { [string]: (...any) -> any } = {
 			return "player_not_found"
 		end
 		UltimateService.fillForTest(player)
+		return true
+	end,
+	kill = function(name, monsterId)
+		local player = findPlayer(name)
+		if not player then
+			return "player_not_found"
+		end
+		QuestService.record(player, { kind = "kill", monster = tostring(monsterId) })
 		return true
 	end,
 }

@@ -109,7 +109,22 @@ Config.Drops = {
 }
 
 Config.Badge = {
-	CompletionBadgeId = 0, -- TODO: ダイスケさんが作成した Badge ID に差し替える（Step 3）
+	CompletionBadgeId = 0, -- TODO: ダイスケさんが作成した Badge ID に差し替える（0 のあいだは渡さない）
+}
+
+-- 探索ピース（Step 3）。置き場所：Workspace に「ExploreSpot_<隠し場所 ID>」という Part があればその上。
+-- なければ町の e01 だけ、スポーン地点から SpawnOffset の位置（最初の 60 秒で必ず目の前に出すため）
+Config.Explore = {
+	PromptDistance = 10, -- 拾うボタンが出る距離（stud）
+	PickupTolerance = 6, -- サーバーでの距離確認に足す余裕（stud）
+	SpawnOffset = { 0, 1.5, -8 }, -- スポーン地点から見た e01 の位置（x, y, z。-z が正面）
+}
+
+-- 町の掲示板（Step 3）。置き場所：Workspace に「QuestBoard」という Part があればそこ。
+-- なければスポーン地点から SpawnOffset の位置
+Config.QuestBoard = {
+	PromptDistance = 12,
+	SpawnOffset = { 12, 0, -6 },
 }
 
 Config.Titles = {
