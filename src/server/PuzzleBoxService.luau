@@ -14,6 +14,7 @@ local DataService = require(script.Parent.DataService)
 local InventoryService = require(script.Parent.InventoryService)
 local StateSync = require(script.Parent.StateSync)
 local Metrics = require(script.Parent.Metrics)
+local DuelRingService = require(script.Parent.DuelRingService)
 
 local PuzzleBoxService = {}
 
@@ -60,6 +61,9 @@ function PuzzleBoxService.place(player: Player, pieceId: any): (boolean, string?
 	end
 	if not isInTown(player) then
 		return false, "not_in_town"
+	end
+	if DuelRingService.isLocked(player) then
+		return false, "ring_locked" -- 賭けピースを動かさないため、決闘の台にいる間ははめられない
 	end
 	local ok, reason = InventoryService.placePiece(player, pieceId)
 	if not ok then

@@ -6,6 +6,7 @@ local SessionLock = require("../src/shared/Logic/SessionLock")
 local InventoryLogic = require("../src/shared/Logic/InventoryLogic")
 local PuzzleLogic = require("../src/shared/Logic/PuzzleLogic")
 local QuestLogic = require("../src/shared/Logic/QuestLogic")
+local DuelLogic = require("../src/shared/Logic/DuelLogic")
 
 local Config = require("../src/shared/Config")
 local AbilityDefs = require("../src/shared/AbilityDefs")
@@ -746,6 +747,56 @@ for _, path in sourceFiles do
 		end
 	end)
 end
+
+-- DuelLogic（Step 4） -------------------------------------------------------
+
+test("賭けピース：未装着がなければ nil", function()
+	eq(DuelLogic.pickBet({ placed = { p01 = true }, unplaced = {} }, PieceDefs), nil)
+end)
+
+test("賭けピース：はまっているピースの写しを最優先", function()
+	local pieces = { placed = { p02 = true }, unplaced = { p02 = 1, p05 = 2, p09 = 1 } }
+	eq(DuelLogic.pickBet(pieces, PieceDefs), "p02")
+end)
+
+test("賭けピース：次に 2 枚以上あるもの、最後に 1 枚だけのもの", function()
+	eq(DuelLogic.pickBet({ placed = {}, unplaced = { p05 = 2, p09 = 1 } }, PieceDefs), "p05")
+	eq(DuelLogic.pickBet({ placed = {}, unplaced = { p03 = 1, p07 = 1 } }, PieceDefs), "p07", "同じ順位なら grid の大きい方")
+	eq(DuelLogic.pickBet({ placed = {}, unplaced = { p99 = 3 } }, PieceDefs), nil, "未定義の ID は選ばない")
+end)
+
+test("賭けピース：元のテーブルは書き換えない", function()
+	local pieces = { placed = {}, unplaced = { p05 = 2 } }
+	DuelLogic.pickBet(pieces, PieceDefs)
+	eq(pieces.unplaced.p05, 2)
+end)
+
+test("時間切れ：HP の割合が少ない方が負け、同じなら引き分け", function()
+	eq(DuelLogic.judgeTimeout(0.3, 0.8), "b", "a が少ない → b の勝ち")
+	eq(DuelLogic.judgeTimeout(0.9, 0.2), "a")
+	eq(DuelLogic.judgeTimeout(0.5, 0.5), "draw")
+end)
+
+test("リングの内外と台の上", function()
+	eq(DuelLogic.isInside(0, 0, 3, 16, 4), true)
+	eq(DuelLogic.isInside(15, 8, 3, 16, 4), false, "縁の外")
+	eq(DuelLogic.isInside(3, 3, -5, 16, 4), false, "落ちた")
+	eq(DuelLogic.isOnPad(1, 1, 3, 3, 7), true)
+	eq(DuelLogic.isOnPad(4, 0, 3, 3, 7), false, "台の外")
+	eq(DuelLogic.isOnPad(0, 0, 10, 3, 7), false, "跳んでいる")
+end)
+
+test("再戦は負けてから決まった秒数以内", function()
+	eq(DuelLogic.isRematch(nil, 100, 600), false)
+	eq(DuelLogic.isRematch(100, 650, 600), true)
+	eq(DuelLogic.isRematch(100, 701, 600), false)
+end)
+
+test("リングの数値がそろっている", function()
+	eq(Config.Ring.PadOffset + Config.Ring.PadRadius < Config.Ring.Radius, true, "台はリングの中にある")
+	eq(#Config.Ring.SpawnOffset, 3)
+	eq(Config.Ring.CountdownSeconds > 0 and Config.Ring.MatchSeconds > 0, true)
+end)
 
 -- Claude と Codex の指示の同期 ------------------------------------------------
 

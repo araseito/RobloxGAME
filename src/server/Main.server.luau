@@ -21,6 +21,7 @@ local CombatSync = require(Server.CombatSync)
 local TrainingDummy = require(Server.TrainingDummy)
 local PuzzleBoxService = require(Server.PuzzleBoxService)
 local QuestService = require(Server.QuestService)
+local DuelRingService = require(Server.DuelRingService)
 local DevTools = require(Server.DevTools)
 
 type Result = Remotes.Result
@@ -197,6 +198,7 @@ UltimateService.init()
 DataService.init()
 TrainingDummy.init()
 QuestService.init()
+DuelRingService.init()
 DevTools.init()
 
-print("[Server] Phase 0 起動完了（Step 3）")
+print("[Server] Phase 0 起動完了（Step 4）")
