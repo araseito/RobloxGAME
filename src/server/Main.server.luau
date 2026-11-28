@@ -19,6 +19,8 @@ local UltimateService = require(Server.UltimateService)
 local EquipmentService = require(Server.EquipmentService)
 local CombatSync = require(Server.CombatSync)
 local TrainingDummy = require(Server.TrainingDummy)
+local PuzzleBoxService = require(Server.PuzzleBoxService)
+local QuestService = require(Server.QuestService)
 local DevTools = require(Server.DevTools)
 
 type Result = Remotes.Result
@@ -59,8 +61,9 @@ CombatService.setHooks({
 	onTaken = function(player: Player, amount: number)
 		UltimateService.add(player, amount * Config.Ultimate.PerDamageTaken)
 	end,
-	onKill = function(player: Player)
+	onKill = function(player: Player, enemy: any)
 		UltimateService.add(player, Config.Ultimate.OnMonsterKill)
+		QuestService.record(player, { kind = "kill", monster = enemy.id })
 	end,
 	onStateChanged = function(player: Player)
 		CombatSync.push(player)
@@ -95,6 +98,7 @@ DataService.Loaded:Connect(function(player: Player)
 	EquipmentService.validate(player)
 	CombatService.refreshSpeed(player)
 	CombatSync.push(player)
+	QuestService.retryPending(player)
 end)
 
 -- Remote の受け口 ---------------------------------------------------------------
@@ -145,6 +149,14 @@ Remotes.onInvoke("Grant_Strip", function(player: Player, abilityId: any): Result
 	return result(GrantService.strip(player, target, abilityId))
 end)
 
+Remotes.onInvoke("Piece_Place", function(player: Player, pieceId: any): Result
+	local ok, reason = PuzzleBoxService.place(player, pieceId)
+	if ok then
+		QuestService.retryPending(player) -- 未装着の枠が空いたので、持ちきれなかった報酬をもう一度
+	end
+	return result(ok, reason)
+end)
+
 Remotes.onInvoke("Ultimate_Cast", function(player: Player): Result
 	local ok, reason, ultimateId = UltimateService.cast(player)
 	return { ok = ok, reason = reason, ultimate = ultimateId }
@@ -184,6 +196,7 @@ CombatService.init()
 UltimateService.init()
 DataService.init()
 TrainingDummy.init()
+QuestService.init()
 DevTools.init()
 
-print("[Server] Phase 0 起動完了（Step 2）")
+print("[Server] Phase 0 起動完了（Step 3）")
