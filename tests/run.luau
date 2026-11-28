@@ -747,6 +747,20 @@ for _, path in sourceFiles do
 	end)
 end
 
+-- Claude と Codex の指示の同期 ------------------------------------------------
+
+local function bodyWithoutHeading(path: string): string
+	local text = string.gsub(fs.readFile(path), "\r", "")
+	local _, firstLineEnd = string.find(text, "\n", 1, true)
+	return string.sub(text, (firstLineEnd or 0) + 1)
+end
+
+test("CLAUDE.md と AGENTS.md は見出し以外が同じ", function()
+	eq(fs.isFile("CLAUDE.md"), true, "CLAUDE.md がある")
+	eq(fs.isFile("AGENTS.md"), true, "AGENTS.md がある")
+	eq(bodyWithoutHeading("CLAUDE.md") == bodyWithoutHeading("AGENTS.md"), true, "片方だけ直していないか")
+end)
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	error("テスト失敗")
