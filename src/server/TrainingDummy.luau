@@ -202,11 +202,22 @@ function TrainingDummy.init()
 	regrant()
 	updateLabel(model, label)
 
-	-- 剥がされたら少し待ってかけ直す
+	-- 剥がされたら Config.Dummy.RegrantSeconds 秒待ってかけ直す。
+	-- 剥がされた時刻から数える（決まった間隔でかけ直すと、剥がした直後に戻ってしまうことがある）
+	local strippedAt: number? = nil
+	model:GetAttributeChangedSignal("Grants"):Connect(function()
+		if GrantService.has(model, Config.Dummy.SelfGrant) then
+			strippedAt = nil
+		elseif strippedAt == nil then
+			strippedAt = os.clock()
+		end
+	end)
 	task.spawn(function()
 		while model.Parent do
-			task.wait(Config.Dummy.RegrantSeconds)
-			regrant()
+			task.wait(0.5)
+			if strippedAt and os.clock() - strippedAt >= Config.Dummy.RegrantSeconds then
+				regrant()
+			end
 		end
 	end)
 
