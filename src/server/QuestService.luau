@@ -21,6 +21,7 @@ local Metrics = require(script.Parent.Metrics)
 local Remotes = require(script.Parent.Remotes)
 local CombatService = require(script.Parent.CombatService)
 local WorldMarkers = require(script.Parent.WorldMarkers)
+local TravelService = require(script.Parent.TravelService)
 
 local QuestService = {}
 
@@ -121,9 +122,17 @@ local function spotPosition(spotId: string): Vector3?
 	if marker then
 		return marker.Position + Vector3.new(0, marker.Size.Y / 2 + 1.5, 0)
 	end
-	-- 印がないときは、町の隠し場所（最初の 1 つ）だけスポーン地点の目の前に出す
+	-- 印がないときは、町の隠し場所（最初の 1 つ）はスポーン地点の目の前に出す
 	if table.find(AreaDefs.town.exploreSpots, spotId) then
 		return spawnCFrame() * toVector(Config.Explore.SpawnOffset)
+	end
+	-- それ以外は、そのエリアの到着地点から決まった位置（固定の隠し場所）
+	local offset = Config.Explore.AreaOffsets[spotId]
+	for areaId, area in AreaDefs do
+		local arrival = TravelService.arrivalOf(areaId)
+		if offset and arrival and table.find(area.exploreSpots, spotId) then
+			return arrival * toVector(offset)
+		end
 	end
 	return nil
 end

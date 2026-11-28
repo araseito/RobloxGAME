@@ -15,15 +15,15 @@ local InventoryService = require(script.Parent.InventoryService)
 local StateSync = require(script.Parent.StateSync)
 local Metrics = require(script.Parent.Metrics)
 local DuelRingService = require(script.Parent.DuelRingService)
+local TravelService = require(script.Parent.TravelService)
 
 local PuzzleBoxService = {}
 
 local COMPLETION_TITLE = "first_picture"
 
--- はめられるのは町だけ（5.3）。
--- 仮置き：エリアと移動は Step 5 で作る。それまではマップ全体が町なので、どこでもはめられる
-local function isInTown(_player: Player): boolean
-	return true
+-- はめられるのは町だけ（5.3）
+local function isInTown(player: Player): boolean
+	return TravelService.isInTown(player)
 end
 
 local function awardBadge(player: Player)

@@ -29,6 +29,7 @@ export type Enemy = {
 	health: number,
 	alive: boolean,
 	onDeath: ((Model, Player?) -> ())?,
+	damageBy: { [Player]: number }, -- 誰がどれだけ与えたか（ボスのドロップを全員に配るため）
 }
 
 -- 攻撃・スタンの対象：Player か敵の Model
@@ -254,6 +255,7 @@ function CombatService.registerEnemy(model: Model, id: string, maxHealth: number
 		health = maxHealth,
 		alive = true,
 		onDeath = onDeath,
+		damageBy = {},
 	}
 	enemies[model] = enemy
 	syncEnemyAttributes(enemy)
@@ -275,12 +277,27 @@ function CombatService.getEnemy(target: any): Enemy?
 	return enemies[target :: Model]
 end
 
+-- その敵に、まだサーバーにいる人それぞれが与えたダメージの合計（写し）
+function CombatService.contributionsOf(model: Model): { [Player]: number }
+	local enemy = enemies[model]
+	local out = {}
+	if enemy then
+		for player, amount in enemy.damageBy do
+			if player.Parent ~= nil then
+				out[player] = amount
+			end
+		end
+	end
+	return out
+end
+
 -- 倒れた敵を元に戻す（木人の復活・モンスターの再出現）
 function CombatService.reviveEnemy(model: Model)
 	local enemy = enemies[model]
 	if enemy then
 		enemy.health = enemy.maxHealth
 		enemy.alive = true
+		enemy.damageBy = {}
 		stunnedUntil[model] = nil
 		model:SetAttribute("Stunned", false)
 		syncEnemyAttributes(enemy)
@@ -320,6 +337,7 @@ function CombatService.hitEnemy(attacker: Player, model: Model, base: number, op
 	end
 
 	enemy.health = math.max(0, enemy.health - amount)
+	enemy.damageBy[attacker] = (enemy.damageBy[attacker] or 0) + amount
 	fx({ t = "hit", target = model, amount = amount, finisher = outcome.knockback, guarded = false, broken = false })
 	BattleStateService.notePve(attacker, model)
 	if hooks.onDealt then

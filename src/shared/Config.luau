@@ -115,6 +115,42 @@ Config.Ring = {
 
 Config.Drops = {
 	NormalPieceChance = 0.05,
+	BossContributionRatio = 0.1, -- ボスの最大 HP のこの割合以上を与えた人全員がドロップをもらう
+}
+
+-- モンスター（Step 5）。数値はすべて仮置き
+Config.Monsters = {
+	TickInterval = 0.1, -- 動きと攻撃を決める間隔（秒）
+	AggroRange = 40, -- この距離に入ったプレイヤーを狙う（同じエリアにいる人だけ）
+	LeashRange = 70, -- 出現点からこれ以上離れたら、狙いをやめて戻る
+	WindupSeconds = 0.45, -- 攻撃の予備動作（光る）
+	ProjectileSeconds = 0.35, -- 砂の弾が飛ぶ時間
+	ProjectileHitRadius = 4, -- 狙った地点からこの距離にいれば弾が当たる（ダッシュで避けられる）
+	RespawnSeconds = 8,
+	BossRespawnSeconds = 30,
+	RegrantSeconds = 10, -- 自分への付与を剥がされてから、かけ直すまでの秒数
+	Boss = {
+		BigAttackBelow = 0.5, -- HP の割合がこれを下回ると大技を混ぜる
+		BigAttackEvery = 3, -- 何回に 1 回が大技か
+		BigDamageMultiplier = 2,
+		BigRangeMultiplier = 1.6,
+		BigWindupSeconds = 1.2,
+	},
+	-- 出現点：Workspace.MonsterSpawns の下にモンスター ID と同じ名前の Part があればその位置。
+	-- なければエリアの到着地点から offset の位置（x, y, z）。spread の範囲に count 体を散らす
+	Spawns = {
+		{ monster = "moripon", area = "satoyama", offset = { 35, 0, -45 }, count = 4, spread = 10 },
+		{ monster = "aohane", area = "satoyama", offset = { -40, 0, -55 }, count = 2, spread = 12 },
+		{ monster = "sandhorn", area = "dungeon", offset = { 0, 0, -50 }, count = 3, spread = 14 },
+		{ monster = "oonushi", area = "dungeon", offset = { 0, 0, -105 }, count = 1, spread = 0 },
+	},
+	-- 見た目の仮置き（size は x, y, z、color は RGB、hover は地面から浮く高さ）
+	Looks = {
+		moripon = { size = { 3, 3, 3 }, color = { 110, 170, 80 }, hover = 0 },
+		aohane = { size = { 3, 1.5, 3 }, color = { 80, 140, 230 }, hover = 7 },
+		sandhorn = { size = { 3.5, 2.5, 6 }, color = { 205, 170, 110 }, hover = 0 },
+		oonushi = { size = { 10, 9, 10 }, color = { 110, 75, 55 }, hover = 0 },
+	} :: { [string]: { size: { number }, color: { number }, hover: number } },
 }
 
 Config.Badge = {
@@ -127,6 +163,21 @@ Config.Explore = {
 	PromptDistance = 10, -- 拾うボタンが出る距離（stud）
 	PickupTolerance = 6, -- サーバーでの距離確認に足す余裕（stud）
 	SpawnOffset = { 0, 1.5, -8 }, -- スポーン地点から見た e01 の位置（x, y, z。-z が正面）
+	-- 町以外の隠し場所は、印がなければそのエリアの到着地点から見たこの位置（固定の隠し場所。仮置き）
+	AreaOffsets = {
+		e02 = { -95, 1.5, 85 },
+	} :: { [string]: { number } },
+}
+
+-- エリアと移動（Step 5）。到着地点：Workspace.Spawns の下に AreaDefs の spawnPart という Part があればその上。
+-- なければ町はスポーン地点、それ以外はスポーン地点から PlaceholderOffsets の位置に仮の足場を作る（地形は Studio 側で作る）
+Config.Travel = {
+	PlaceholderOffsets = {
+		satoyama = { 0, 0, 700 },
+		dungeon = { 700, 0, 0 },
+	} :: { [string]: { number } },
+	PlaceholderSize = 260, -- 仮の足場の一辺（stud）
+	Cooldown = 2, -- 続けて移動できるまでの秒数
 }
 
 -- 町の掲示板（Step 3）。置き場所：Workspace に「QuestBoard」という Part があればそこ。
