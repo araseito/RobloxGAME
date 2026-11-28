@@ -20,6 +20,7 @@ local StateSync = require(script.Parent.StateSync)
 local Metrics = require(script.Parent.Metrics)
 local Remotes = require(script.Parent.Remotes)
 local CombatService = require(script.Parent.CombatService)
+local WorldMarkers = require(script.Parent.WorldMarkers)
 
 local QuestService = {}
 
@@ -29,19 +30,8 @@ QuestService.BOARD_TAG = "QuestBoard"
 
 local spots: { [string]: BasePart } = {}
 
-local function toVector(t: { number }): Vector3
-	return Vector3.new(t[1], t[2], t[3])
-end
-
--- 置き場所の基準にするスポーン地点（なければ原点）
-local function spawnCFrame(): CFrame
-	for _, d in workspace:GetDescendants() do
-		if d:IsA("SpawnLocation") then
-			return d.CFrame
-		end
-	end
-	return CFrame.new()
-end
+local toVector = WorldMarkers.toVector
+local spawnCFrame = WorldMarkers.spawnCFrame
 
 -- 報酬 -----------------------------------------------------------------------
 
@@ -127,8 +117,8 @@ function QuestService.pickUp(player: Player, spotId: string): (boolean, string?)
 end
 
 local function spotPosition(spotId: string): Vector3?
-	local marker = workspace:FindFirstChild("ExploreSpot_" .. spotId)
-	if marker and marker:IsA("BasePart") then
+	local marker = WorldMarkers.find("ExploreSpot_" .. spotId)
+	if marker then
 		return marker.Position + Vector3.new(0, marker.Size.Y / 2 + 1.5, 0)
 	end
 	-- 印がないときは、町の隠し場所（最初の 1 つ）だけスポーン地点の目の前に出す
@@ -182,9 +172,9 @@ end
 -- 掲示板 ---------------------------------------------------------------------
 
 local function buildBoard()
-	local marker = workspace:FindFirstChild("QuestBoard")
+	local marker = WorldMarkers.find("QuestBoard")
 	local board: BasePart
-	if marker and marker:IsA("BasePart") then
+	if marker then
 		board = marker
 	else
 		local base = spawnCFrame() * CFrame.new(toVector(Config.QuestBoard.SpawnOffset))

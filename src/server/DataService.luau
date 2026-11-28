@@ -23,6 +23,12 @@ DataService.Loaded = loadedEvent.Event -- (player: Player)
 
 local profiles: { [Player]: any } = {}
 local saving: { [Player]: boolean } = {}
+-- 退出時、最後の保存の写しを取る直前に呼ぶ（決闘中に抜けた人の賭けピースを、保存に間に合わせて動かすため）
+local beforeReleaseHooks: { (Player) -> () } = {}
+
+function DataService.onBeforeRelease(fn: (Player) -> ())
+	table.insert(beforeReleaseHooks, fn)
+end
 
 -- Studio では JobId が空なので、起動ごとに別の ID を作る
 local jobId = if game.JobId ~= "" then game.JobId else ("studio-" .. HttpService:GenerateGUID(false))
@@ -188,6 +194,12 @@ end
 
 local function onPlayerRemoving(player: Player)
 	if profiles[player] ~= nil then
+		for _, fn in beforeReleaseHooks do
+			local ok, err = pcall(fn, player)
+			if not ok then
+				warn("[DataService] 退出時の処理でエラー: " .. tostring(err))
+			end
+		end
 		saveProfile(player, true)
 		profiles[player] = nil
 	end

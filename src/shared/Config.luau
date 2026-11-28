@@ -102,6 +102,15 @@ Config.Ring = {
 	MatchSeconds = 90,
 	LoserCooldown = 10,
 	RematchWindowSeconds = 600, -- 負けてからこの秒数以内の再参加を「再戦」と数える
+	-- 置き場所：Workspace に「DuelRing」という Part があればその上面の中心。なければスポーン地点から SpawnOffset
+	SpawnOffset = { 0, 0, 30 }, -- 町の広場の中央の仮の位置（x, y, z）
+	Radius = 16, -- リングの半径（stud）。中心からこれより外に出たら負け
+	FallDepth = 4, -- 床よりこれ以上下に落ちたら負け（stud）
+	PadOffset = 11, -- 台の中心から台までの距離（stud）
+	PadRadius = 3, -- 台の半径（stud）
+	PadMaxHeight = 7, -- 台の上に「立っている」とみなす高さ（stud）
+	TickInterval = 0.2, -- 台と決着を確かめる間隔（秒）
+	NoticeSeconds = 4, -- 乗れない理由を同じ人に知らせ直すまでの秒数
 }
 
 Config.Drops = {
