@@ -28,6 +28,7 @@ Config.Inventory = {
 Config.Grant = {
 	BaseCapacity = 10, -- 付与上限。装備の capacityBonus が加算される
 	ReleaseCooldown = 5, -- 解除した能力を付け直せない秒数
+	StripRange = 30, -- 剥がしが届く距離（stud）
 }
 
 Config.Ultimate = {
@@ -42,14 +43,58 @@ Config.Ultimate = {
 	PowerPerCost = 8, -- 威力 = BasePower + 消費コスト合計 × PowerPerCost
 	CastTime = 1.2, -- 秒（技名表示とカットイン）
 	PvpDamageCapRatio = 0.35, -- 対人ダメージ上限（最大 HP 比）
+	DefaultUltimate = "might_ult", -- 付与が 1 つもないときに出る技（仮置き）
+	TargetRangeTolerance = 4, -- 必殺技の射程に足す余裕（stud）
 }
 
+-- 戦闘の操作（Step 2 改訂：4 段コンボ・ガード・回避ダッシュ）
 Config.Combat = {
 	MaxHealth = 100,
-	BasicDamage = 10,
-	BasicInterval = 0.6,
+	BaseWalkSpeed = 16,
+	ComboDamage = { 6, 6, 8, 14 }, -- 4 段コンボの各段のダメージ。4 段目が「締め」
+	ComboInterval = 0.35, -- 1 段ごとの最短間隔（秒）
+	ComboResetSeconds = 1.0, -- この秒数あくと 1 段目に戻る
 	BasicRange = 8, -- stud
+	RangeTolerance = 4, -- 通信の遅れを見込んで射程に足す余裕（stud）
+	IntervalTolerance = 0.05, -- 攻撃間隔の許容誤差（秒）
+	FinisherStunSeconds = 0.6, -- 締めで吹き飛んだ相手が動けない秒数
+	Knockback = {
+		Horizontal = 55, -- プレイヤーを飛ばす速さ（stud/秒）
+		Vertical = 20,
+		Duration = 0.2, -- 秒
+		EnemyDistance = 10, -- 敵を押し出す距離（stud）
+	},
+	Guard = {
+		DamageMultiplier = 0.2, -- 正面からのダメージをこの倍率にする
+		WalkSpeedMultiplier = 0.4, -- ガード中の移動速度
+		BreakStunSeconds = 1.5, -- ガードを割られたときに動けない秒数
+	},
+	Dash = {
+		Cooldown = 3, -- 秒
+		GaleCooldownMultiplier = 0.5, -- 疾風付与中はクールダウンがこの倍率
+		Speed = 70, -- stud/秒
+		Duration = 0.18, -- 秒
+	},
 	PveCombatTimeout = 15, -- この秒数攻撃しなければ PvE 戦闘終了
+	BattleTickInterval = 0.5, -- 戦闘状態の期限切れを確かめる間隔（秒）
+	MinDamageTakenMultiplier = 0.1, -- 被ダメージ倍率の下限
+}
+
+-- 練習用の木人（Step 2。モンスター実装前の練習相手）
+Config.Dummy = {
+	MaxHealth = 300,
+	RespawnSeconds = 3,
+	SelfGrant = "bulwark", -- 剥がす練習用に自分へかける付与
+	RegrantSeconds = 10, -- 剥がされてからかけ直すまでの秒数
+	-- 攻撃（自分を攻撃したプレイヤーにだけ反撃する）
+	AttackInterval = 4, -- 秒
+	TelegraphSeconds = 0.8, -- 赤く光る予備動作の秒数。この間に締めで吹き飛ばすと攻撃を止められる
+	AttackDamage = 15,
+	AttackRange = 10, -- stud
+	ReturnDistance = 25, -- 元の位置からこれ以上押し出されたら戻る
+	-- Workspace に DummySpawn という Part がなければここに置く（x, y, z）。
+	-- Config は Lune のテストでも読むので Vector3 などの Roblox の型は使わない（ERROR_LOG #2）
+	DefaultPosition = { 0, 3, -20 },
 }
 
 Config.Ring = {

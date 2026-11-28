@@ -95,7 +95,7 @@ local function refreshItems()
 	itemsLabel.Text = if #lines > 0 then table.concat(lines, "\n") else "（カードなし）"
 end
 
-function HUD.mount(playerGui: PlayerGui)
+function HUD.mount(playerGui: PlayerGui): ScreenGui
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "HUD"
 	gui.ResetOnSpawn = false
@@ -105,8 +105,9 @@ function HUD.mount(playerGui: PlayerGui)
 	local boxSize = CELL * 3 + GAP * 2
 	local box = Instance.new("Frame")
 	box.Name = "PuzzleBox"
-	box.AnchorPoint = Vector2.new(0.5, 0)
-	box.Position = UDim2.new(0.5, 0, 0, 8)
+	-- 画面中央だとキャラクターの頭と重なるので右上に置く（Step 1 のテストで気づいた点）
+	box.AnchorPoint = Vector2.new(1, 0)
+	box.Position = UDim2.new(1, -12, 0, 8)
 	box.Size = UDim2.fromOffset(boxSize + 12, boxSize + 34)
 	box.BackgroundColor3 = Color3.fromRGB(16, 20, 36)
 	box.BackgroundTransparency = 0.2
@@ -196,6 +197,7 @@ function HUD.mount(playerGui: PlayerGui)
 	end)
 	refreshPieces()
 	refreshItems()
+	return gui
 end
 
 return HUD
