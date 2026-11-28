@@ -2,6 +2,7 @@
 -- HUD：画面右上に 3×3 のパズルボックス、その左に「ボックスにはめる」ボタン、左下に持っているカード。
 -- 見た目は後でダイスケさんが調整する前提の最小構成（絵はまだないので、はめたマスは色と番号で示す）。
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -34,6 +35,7 @@ local rootGui: ScreenGui? = nil
 local knownPlaced: { [string]: boolean }? = nil
 local knownUnplacedTotal = 0
 local knownTitles: { [string]: boolean }? = nil
+local knownItems: { [string]: number }? = nil
 local placing = false
 
 local function sortedPieces(): { any }
@@ -169,7 +171,9 @@ local function refreshPieces()
 		progressLabel.Text = ("%d / 9"):format(placedCount)
 	end
 	if placeButton then
-		placeButton.Visible = PuzzleLogic.nextPlaceable(pieces, PieceDefs) ~= nil
+		-- はめられるのは町だけなので、町にいるときだけ出す（判定はサーバーでもしている）
+		local inTown = (Players.LocalPlayer:GetAttribute("Area") or "town") == "town"
+		placeButton.Visible = inTown and PuzzleLogic.nextPlaceable(pieces, PieceDefs) ~= nil
 	end
 	if knownPlaced and unplacedTotal > knownUnplacedTotal then
 		Toast.show("ピースを手に入れた！")
@@ -208,6 +212,21 @@ local function refreshItems()
 		end
 	end
 	itemsLabel.Text = if #lines > 0 then table.concat(lines, "\n") else "（カードなし）"
+
+	-- 増えたカードを知らせる（最初の表示では知らせない）
+	if knownItems then
+		local gained = {}
+		for _, id in sortedItemIds() do
+			local diff = (items[id] or 0) - (knownItems[id] or 0)
+			if diff > 0 then
+				table.insert(gained, ("%s ×%d"):format(ItemDefs[id].nameJa, diff))
+			end
+		end
+		if #gained > 0 then
+			Toast.show(table.concat(gained, "・") .. " を手に入れた")
+		end
+	end
+	knownItems = table.clone(items)
 end
 
 -- 次にはめられるピースを 1 つはめる（どのピースかはサーバーが確かめる）
@@ -365,6 +384,7 @@ function HUD.mount(playerGui: PlayerGui): ScreenGui
 			end
 		end
 	end)
+	Players.LocalPlayer:GetAttributeChangedSignal("Area"):Connect(refreshPieces)
 	refreshPieces()
 	refreshItems()
 	refreshTitles()

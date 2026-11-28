@@ -23,6 +23,7 @@ local PuzzleBoxService = require(Server.PuzzleBoxService)
 local QuestService = require(Server.QuestService)
 local DuelRingService = require(Server.DuelRingService)
 local TravelService = require(Server.TravelService)
+local MonsterService = require(Server.MonsterService)
 local DevTools = require(Server.DevTools)
 
 type Result = Remotes.Result
@@ -202,6 +203,7 @@ TrainingDummy.init()
 DuelRingService.init()
 TravelService.init() -- 到着地点を決めてから、隠し場所（QuestService）を置く
 QuestService.init()
+MonsterService.init()
 DevTools.init()
 
 print("[Server] Phase 0 起動完了（Step 5）")

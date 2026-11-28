@@ -7,6 +7,7 @@ local InventoryLogic = require("../src/shared/Logic/InventoryLogic")
 local PuzzleLogic = require("../src/shared/Logic/PuzzleLogic")
 local QuestLogic = require("../src/shared/Logic/QuestLogic")
 local DuelLogic = require("../src/shared/Logic/DuelLogic")
+local DropLogic = require("../src/shared/Logic/DropLogic")
 
 local Config = require("../src/shared/Config")
 local AbilityDefs = require("../src/shared/AbilityDefs")
@@ -796,6 +797,104 @@ test("リングの数値がそろっている", function()
 	eq(Config.Ring.PadOffset + Config.Ring.PadRadius < Config.Ring.Radius, true, "台はリングの中にある")
 	eq(#Config.Ring.SpawnOffset, 3)
 	eq(Config.Ring.CountdownSeconds > 0 and Config.Ring.MatchSeconds > 0, true)
+end)
+
+-- DropLogic（Step 5） -------------------------------------------------------
+
+-- 決まった列を返す乱数（テスト用）
+local function sequence(values: { number }): () -> number
+	local i = 0
+	return function()
+		i += 1
+		return values[((i - 1) % #values) + 1]
+	end
+end
+
+test("通常モンスター：素材は min〜max、ピースは確率で", function()
+	local drop = DropLogic.roll(MonsterDefs.moripon, PieceDefs, 0.05, 0, sequence({ 0.0, 0.99, 0.01 }))
+	eq(drop.items.leaf, 2, "0.99 → max の 2")
+	eq(drop.piece, "p03", "0.01 < 0.05 で落ちる")
+	drop = DropLogic.roll(MonsterDefs.moripon, PieceDefs, 0.05, 0, sequence({ 0.0, 0.0, 0.5 }))
+	eq(drop.items.leaf, 1, "0.0 → min の 1")
+	eq(drop.piece, nil, "0.5 では落ちない")
+end)
+
+test("ピースを落とさないモンスターは落とさない", function()
+	local drop = DropLogic.roll(MonsterDefs.aohane, PieceDefs, 1.0, 0, sequence({ 0.0 }))
+	eq(drop.piece, nil)
+	eq(drop.items.feather ~= nil, true)
+end)
+
+test("ボス：1 回目と 2 回目の撃破で別のピース、3 回目からは落とさない", function()
+	local any = sequence({ 0.5 })
+	eq(DropLogic.roll(MonsterDefs.oonushi, PieceDefs, 0.05, 0, any).piece, "p08")
+	eq(DropLogic.roll(MonsterDefs.oonushi, PieceDefs, 0.05, 1, any).piece, "p09")
+	eq(DropLogic.roll(MonsterDefs.oonushi, PieceDefs, 0.05, 2, any).piece, nil)
+	local drop = DropLogic.roll(MonsterDefs.oonushi, PieceDefs, 0.05, 0, any)
+	eq(drop.items.fang ~= nil and drop.items.feather ~= nil, true, "羽と牙も落とす")
+end)
+
+test("ボスのドロップをもらえるのは最大 HP の一定割合以上を与えた人", function()
+	eq(DropLogic.qualifies(150, 1500, 0.1), true)
+	eq(DropLogic.qualifies(149, 1500, 0.1), false)
+end)
+
+test("20 万回のシミュレーション：ピースは約 5%、1 個出るまで平均約 20 体", function()
+	-- Lune には Roblox の Random がないので、種を固定した math.random を使う
+	math.randomseed(12345)
+	local function rng(): number
+		return math.random()
+	end
+	local trials = 200000
+	local pieces = 0
+	local leaves = 0
+	local streak = 0
+	local streaks = {}
+	for _ = 1, trials do
+		local drop = DropLogic.roll(MonsterDefs.moripon, PieceDefs, Config.Drops.NormalPieceChance, 0, rng)
+		streak += 1
+		leaves += drop.items.leaf or 0
+		if drop.piece then
+			pieces += 1
+			table.insert(streaks, streak)
+			streak = 0
+		end
+	end
+	local rate = pieces / trials
+	assert(math.abs(rate - Config.Drops.NormalPieceChance) < 0.003, ("ピースの出現率 %.4f"):format(rate))
+	local total = 0
+	for _, n in streaks do
+		total += n
+	end
+	local mean = total / #streaks
+	assert(math.abs(mean - 1 / Config.Drops.NormalPieceChance) < 1.0, ("平均の撃破数 %.2f"):format(mean))
+	local leafMean = leaves / trials
+	assert(math.abs(leafMean - 1.5) < 0.02, ("葉の平均 %.3f"):format(leafMean))
+	table.sort(streaks)
+	print(("      [参考] ピース %.2f%%、1 個までの平均 %.1f 体、90%% の人は %d 体以内"):format(rate * 100, mean, streaks[math.ceil(#streaks * 0.9)]))
+end)
+
+test("モンスターの出現と見た目が定義とそろっている", function()
+	for _, entry in Config.Monsters.Spawns do
+		eq(MonsterDefs[entry.monster] ~= nil, true, "出現: " .. entry.monster)
+		eq(AreaDefs[entry.area] ~= nil, true, "エリア: " .. entry.area)
+		eq(MonsterDefs[entry.monster].area, entry.area, "棲む場所が一致: " .. entry.monster)
+		eq(#entry.offset, 3)
+	end
+	for id in MonsterDefs do
+		local look = Config.Monsters.Looks[id]
+		eq(look ~= nil, true, "見た目: " .. id)
+		eq(#look.size, 3)
+		eq(#look.color, 3)
+	end
+	for areaId, offset in Config.Travel.PlaceholderOffsets do
+		eq(AreaDefs[areaId] ~= nil, true, "仮の足場: " .. areaId)
+		eq(#offset, 3)
+	end
+	for spotId, offset in Config.Explore.AreaOffsets do
+		eq(QuestLogic.explorePiece(spotId, PieceDefs) ~= nil, true, "隠し場所: " .. spotId)
+		eq(#offset, 3)
+	end
 end)
 
 -- Claude と Codex の指示の同期 ------------------------------------------------
