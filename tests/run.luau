@@ -8,6 +8,7 @@ local PuzzleLogic = require("../src/shared/Logic/PuzzleLogic")
 local QuestLogic = require("../src/shared/Logic/QuestLogic")
 local DuelLogic = require("../src/shared/Logic/DuelLogic")
 local DropLogic = require("../src/shared/Logic/DropLogic")
+local CraftLogic = require("../src/shared/Logic/CraftLogic")
 
 local Config = require("../src/shared/Config")
 local AbilityDefs = require("../src/shared/AbilityDefs")
@@ -895,6 +896,37 @@ test("モンスターの出現と見た目が定義とそろっている", funct
 		eq(QuestLogic.explorePiece(spotId, PieceDefs) ~= nil, true, "隠し場所: " .. spotId)
 		eq(#offset, 3)
 	end
+end)
+
+-- CraftLogic（Step 5） ------------------------------------------------------
+
+test("合成：足りない素材と数", function()
+	local missing = CraftLogic.missing({ fang = 1 }, RecipeDefs.wooden_blade)
+	eq(missing.fang, 1)
+	eq(missing.leaf, 1)
+	eq(CraftLogic.canCraft({ fang = 2, leaf = 1 }, RecipeDefs.wooden_blade), true)
+	eq(CraftLogic.canCraft({ fang = 2 }, RecipeDefs.wooden_blade), false)
+end)
+
+test("合成：消費と付与が InventoryLogic でまとめて成り立つ", function()
+	local ok, items = InventoryLogic.applyItems({ leaf = 3 }, CraftLogic.change(RecipeDefs.potion), ItemDefs, LIMIT, MAX)
+	eq(ok, true)
+	eq(items.leaf, 1)
+	eq(items.potion, 1)
+	ok = InventoryLogic.applyItems({ leaf = 1 }, CraftLogic.change(RecipeDefs.potion), ItemDefs, LIMIT, MAX)
+	eq(ok, false, "足りなければ何も変わらない")
+end)
+
+test("合成：change はレシピを書き換えない", function()
+	local change = CraftLogic.change(RecipeDefs.travel_coat)
+	change.consume.feather = 99
+	eq(RecipeDefs.travel_coat.inputs.feather, 2)
+end)
+
+test("素材の入手先", function()
+	eq(table.concat(CraftLogic.sources("leaf", MonsterDefs), ","), "moripon")
+	eq(table.concat(CraftLogic.sources("fang", MonsterDefs), ","), "oonushi,sandhorn")
+	eq(#CraftLogic.sources("potion", MonsterDefs), 0)
 end)
 
 -- Claude と Codex の指示の同期 ------------------------------------------------

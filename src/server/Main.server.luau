@@ -24,6 +24,7 @@ local QuestService = require(Server.QuestService)
 local DuelRingService = require(Server.DuelRingService)
 local TravelService = require(Server.TravelService)
 local MonsterService = require(Server.MonsterService)
+local CraftService = require(Server.CraftService)
 local DevTools = require(Server.DevTools)
 
 type Result = Remotes.Result
@@ -174,6 +175,10 @@ local actions: { [string]: (Player, any) -> (boolean, string?) } = {
 		return CombatService.dash(player)
 	end,
 	travel = TravelService.travel, -- id = エリア ID
+	craft = CraftService.craft, -- id = レシピ ID
+	craft_open = CraftService.opened, -- 合成画面を開いた（計測用）
+	craft_close = CraftService.closed, -- 合成画面を閉じた（計測用）
+	use_item = CraftService.useItem, -- id = アイテム ID
 }
 
 Remotes.onInvoke("Action", function(player: Player, kind: any, id: any): Result
@@ -204,6 +209,7 @@ DuelRingService.init()
 TravelService.init() -- 到着地点を決めてから、隠し場所（QuestService）を置く
 QuestService.init()
 MonsterService.init()
+CraftService.init()
 DevTools.init()
 
 print("[Server] Phase 0 起動完了（Step 5）")
