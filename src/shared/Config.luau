@@ -127,6 +127,21 @@ Config.Explore = {
 	PromptDistance = 10, -- 拾うボタンが出る距離（stud）
 	PickupTolerance = 6, -- サーバーでの距離確認に足す余裕（stud）
 	SpawnOffset = { 0, 1.5, -8 }, -- スポーン地点から見た e01 の位置（x, y, z。-z が正面）
+	-- 町以外の隠し場所は、印がなければそのエリアの到着地点から見たこの位置（固定の隠し場所。仮置き）
+	AreaOffsets = {
+		e02 = { -95, 1.5, 85 },
+	} :: { [string]: { number } },
+}
+
+-- エリアと移動（Step 5）。到着地点：Workspace.Spawns の下に AreaDefs の spawnPart という Part があればその上。
+-- なければ町はスポーン地点、それ以外はスポーン地点から PlaceholderOffsets の位置に仮の足場を作る（地形は Studio 側で作る）
+Config.Travel = {
+	PlaceholderOffsets = {
+		satoyama = { 0, 0, 700 },
+		dungeon = { 700, 0, 0 },
+	} :: { [string]: { number } },
+	PlaceholderSize = 260, -- 仮の足場の一辺（stud）
+	Cooldown = 2, -- 続けて移動できるまでの秒数
 }
 
 -- 町の掲示板（Step 3）。置き場所：Workspace に「QuestBoard」という Part があればそこ。

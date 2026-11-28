@@ -15,6 +15,7 @@ local CombatFx = require(script.Parent.CombatFx)
 local QuestBoardUI = require(script.Parent.QuestBoardUI)
 local ExploreSpots = require(script.Parent.ExploreSpots)
 local RingUI = require(script.Parent.RingUI)
+local TravelUI = require(script.Parent.TravelUI)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
@@ -26,6 +27,7 @@ CombatFx.mount(playerGui)
 QuestBoardUI.mount(gui)
 ExploreSpots.mount()
 RingUI.mount(gui)
+TravelUI.mount(gui)
 
 -- スナップショットより先に差分の受け口をつなぐ（取りこぼし防止）
 Net.getEvent("State_Delta").OnClientEvent:Connect(function(delta: any)

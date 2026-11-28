@@ -22,6 +22,7 @@ local TrainingDummy = require(Server.TrainingDummy)
 local PuzzleBoxService = require(Server.PuzzleBoxService)
 local QuestService = require(Server.QuestService)
 local DuelRingService = require(Server.DuelRingService)
+local TravelService = require(Server.TravelService)
 local DevTools = require(Server.DevTools)
 
 type Result = Remotes.Result
@@ -171,6 +172,7 @@ local actions: { [string]: (Player, any) -> (boolean, string?) } = {
 	dash = function(player: Player)
 		return CombatService.dash(player)
 	end,
+	travel = TravelService.travel, -- id = エリア ID
 }
 
 Remotes.onInvoke("Action", function(player: Player, kind: any, id: any): Result
@@ -197,8 +199,9 @@ CombatService.init()
 UltimateService.init()
 DataService.init()
 TrainingDummy.init()
-QuestService.init()
 DuelRingService.init()
+TravelService.init() -- 到着地点を決めてから、隠し場所（QuestService）を置く
+QuestService.init()
 DevTools.init()
 
-print("[Server] Phase 0 起動完了（Step 4）")
+print("[Server] Phase 0 起動完了（Step 5）")
